@@ -1,0 +1,6 @@
+/data/
+*.db
+*.db-shm
+*.db-wal
+/submarine-server
+/submarine-server.exe

@@ -1,0 +1,31 @@
+# Example deployment for a host that already runs cloudflared.
+#
+# The port is published on 127.0.0.1 only, so the one way in from outside is
+# the tunnel. That is what makes TRUST_PROXY_HEADER safe: nothing else can
+# reach the port to forge CF-Connecting-IP.
+#
+# In the tunnel config, route the public hostname to http://localhost:8080.
+# Do NOT put Cloudflare Access or a bot challenge on that hostname: the
+# Submarine app is a native client and can't complete them.
+
+services:
+  submarine:
+    image: submarine-server:latest   # or build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"        # loopback only; not reachable from the LAN
+    environment:
+      SIGNUP: allowlist              # open | allowlist | closed
+      TRUST_PROXY_HEADER: CF-Connecting-IP
+      # Optional email delivery. Without SMTP_HOST, codes go to `docker logs`.
+      # SMTP_HOST: smtp.example.com
+      # SMTP_PORT: "587"
+      # SMTP_SECURITY: starttls      # starttls | tls | none
+      # SMTP_USERNAME: submarine@example.com
+      # SMTP_PASSWORD: change-me
+      # SMTP_FROM: "Submarine Sync <submarine@example.com>"
+    volumes:
+      - submarine-data:/data
+
+volumes:
+  submarine-data:
