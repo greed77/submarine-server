@@ -56,6 +56,35 @@ All settings come from environment variables.
 | `SMTP_SECURITY` | `starttls` | `starttls`, `tls` (implicit, usually port 465) or `none` |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | | |
 | `SMTP_FROM` | | Required when `SMTP_HOST` is set |
+| `ADMIN_ADDR` | *(empty)* | Listen address for the admin web UI inside the container, e.g. `:8081`. It's off when empty. To use a different host port, change the Docker port mapping (`-p 127.0.0.1:9081:8081`), not this setting |
+| `CF_ACCESS_TEAM_DOMAIN` | | Admin auth through Cloudflare Access: your team name or `<team>.cloudflareaccess.com` |
+| `CF_ACCESS_AUD` | | The Access application's audience (AUD) tag |
+| `ADMIN_PASSWORD` | | Admin auth by HTTP basic auth (any username) |
+| `ADMIN_INSECURE_NO_AUTH` | | `true` to run the admin UI with no auth at all (only if the port is private to you) |
+
+## Admin web UI
+
+Set `ADMIN_ADDR` to get a web page for managing the server:
+- **Users:** everyone's storage use, last-seen time, devices and status.
+- **Per-user page:** their profiles and shares, plus a signed-in-devices list.
+- **Actions:** create users, hand out password-reset and sign-in codes, sign out all devices,
+  disable accounts, and delete users or shares.
+- **Sign-up:** manage the allowlist.
+
+The server never has the keys, so the UI shows sizes and counts, never the contents of anyone's data.
+
+It runs on its own port, separate from the API, and it won't start without authentication:
+
+- **Cloudflare Access (recommended):** give the admin port its own tunnel hostname, create
+  an Access application for that hostname, and set `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`
+  (in Zero Trust → Access → Applications → your app → *Application Audience (AUD) Tag*).
+  The server checks the Access token's signature itself, so reaching the port without going
+  through Cloudflare doesn't get anyone in. Admin actions are logged with the Access email.
+- **Password:** set `ADMIN_PASSWORD` for browser basic auth. After 10 wrong passwords in a
+  minute, the UI refuses logins for a minute. You can set this together with Access.
+
+All forms are protected against cross-site requests, and deletes require typing the user's
+email or the share's name to confirm.
 
 ## Admin CLI
 
@@ -109,11 +138,7 @@ The tests in `internal/api/api_test.go` are HTTP-level contract tests, one per c
 behavior in the spec. The most important one is equal-stamp replacement (`>=`) in the sync
 merge, which key rotation and escrow refresh depend on.
 
-Layout: `cmd/submarine-server` (entry point and admin CLI), `internal/api` (HTTP handlers),
-`internal/store` (all SQL, including schema migrations), `internal/secret` (tokens and
-password hashing), `internal/mail`, `internal/config`.
-
-## Roadmap
-
-- A read-mostly admin web UI (users, storage, shares) on a separate listener, meant to sit
-  behind Cloudflare Access. The storage stats it needs already exist (`store.UserStats`).
+Layout: `cmd/submarine-server` (entry point and admin CLI), `internal/api` (sync API
+handlers), `internal/admin` (admin web UI: templates and CSS are embedded), `internal/store`
+(all SQL, including schema migrations), `internal/secret` (tokens and password hashing),
+`internal/mail`, `internal/config`.

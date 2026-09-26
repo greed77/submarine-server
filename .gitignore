@@ -4,3 +4,5 @@
 *.db-wal
 /submarine-server
 /submarine-server.exe
+.env
+compose.yml

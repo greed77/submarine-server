@@ -1,0 +1,10 @@
+{{define "content"}}{{$d := .Data}}
+<p class="crumbs"><a href="/">Users</a> / <a href="/users/{{$d.UserID}}">{{$d.Email}}</a> /</p>
+<h1>{{$d.Heading}}</h1>
+<section class="panel">
+  <p>Give this code to <strong>{{$d.Email}}</strong>. {{$d.Instructions}}</p>
+  <code class="code">{{$d.Code}}</code>
+  <p class="hint">Valid for {{$d.Hours}} hour{{if ne $d.Hours 1}}s{{end}}, single use. It won't be shown again; generate a new one if it's lost.</p>
+</section>
+<p><a href="/users/{{$d.UserID}}">← Back to {{$d.Email}}</a></p>
+{{end}}

@@ -8,15 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"code.reedpeople.com/tehgreedo/submarine-server/internal/secret"
 	"code.reedpeople.com/tehgreedo/submarine-server/internal/store"
-)
-
-// Codes printed by the CLI are handed to the user out of band, so they live
-// longer than the emailed equivalents.
-const (
-	cliResetTTL = 24 * time.Hour
-	cliLoginTTL = time.Hour
 )
 
 func userCmd(st *store.Store, args []string) error {
@@ -40,7 +32,7 @@ func userCmd(st *store.Store, args []string) error {
 			return err
 		}
 		fmt.Printf("Created %s.\n\n", email)
-		return printCode(ctx, st, email, store.PurposeReset, cliResetTTL,
+		return printCode(ctx, st, email, store.PurposeReset, store.AdminResetTTL,
 			`In the app: Cloud Sync -> Sign in -> "Forgot password" -> "Already have a reset token? Continue",`+
 				"\npaste this code and choose a password:")
 	}
@@ -54,11 +46,11 @@ func userCmd(st *store.Store, args []string) error {
 	}
 	switch sub {
 	case "reset-token":
-		return printCode(ctx, st, email, store.PurposeReset, cliResetTTL,
+		return printCode(ctx, st, email, store.PurposeReset, store.AdminResetTTL,
 			`In the app: "Forgot password" -> "Already have a reset token? Continue", then paste:`)
 	case "login-token":
-		return printCode(ctx, st, email, store.PurposeLogin, cliLoginTTL,
-			"Paste this one-time sign-in code into the app's email sign-in:")
+		return printCode(ctx, st, email, store.PurposeLogin, store.AdminLoginTTL,
+			`In the app: "Sign in by email" -> "Already have a sign-in token? Continue", then paste:`)
 	case "signout":
 		n, err := st.RevokeUserTokens(ctx, u.ID)
 		if err == nil {
@@ -86,8 +78,8 @@ func userCmd(st *store.Store, args []string) error {
 }
 
 func printCode(ctx context.Context, st *store.Store, email, purpose string, ttl time.Duration, instructions string) error {
-	tok := secret.NewToken(16)
-	if err := st.CreateEmailToken(ctx, secret.Hash(tok), email, purpose, ttl); err != nil {
+	tok, err := st.NewEmailCode(ctx, email, purpose, ttl)
+	if err != nil {
 		return err
 	}
 	fmt.Printf("%s\n\n    %s\n\nValid for %.0f hour(s), single use.\n", instructions, tok, ttl.Hours())

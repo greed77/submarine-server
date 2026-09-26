@@ -1,0 +1,36 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{.Title}} · Submarine admin</title>
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/">Submarine <span>admin</span></a>
+    <nav>
+      <a href="/"{{if eq .Nav "users"}} aria-current="page"{{end}}>Users</a>
+      <a href="/shares"{{if eq .Nav "shares"}} aria-current="page"{{end}}>Shares</a>
+      <a href="/signup"{{if eq .Nav "signup"}} aria-current="page"{{end}}>Sign-up</a>
+    </nav>
+    <span class="actor">Signed in as {{.Actor}}</span>
+  </div>
+</header>
+<main class="wrap">
+{{with .Flash}}<p class="flash ok" role="status">{{.}}</p>{{end}}
+{{with .Error}}<p class="flash err" role="alert">{{.}}</p>{{end}}
+{{template "content" .}}
+</main>
+<footer class="wrap">submarine-server {{.Version}}</footer>
+</body>
+</html>
+{{end}}
+
+{{define "status"}}{{if .Disabled}}<span class="badge danger">disabled</span>{{else if not .HasPassword}}<span class="badge warn">no password</span>{{else}}<span class="badge ok">active</span>{{end}}{{end}}
+
+{{define "role"}}{{if eq . "owner"}}<span class="badge accent">owner</span>{{else if eq . "editor"}}<span class="badge">editor</span>{{else}}<span class="badge">viewer</span>{{end}}{{end}}
+
+{{define "member-status"}}{{if eq . "pending"}}<span class="badge warn">pending</span>{{else}}<span class="badge ok">{{.}}</span>{{end}}{{end}}

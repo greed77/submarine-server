@@ -1,0 +1,56 @@
+{{define "content"}}{{$d := .Data}}{{$s := $d.Share}}
+<p class="crumbs"><a href="/shares">Shares</a> /</p>
+<h1>{{$s.Name}}</h1>
+
+<section class="stats">
+  <div class="stat">
+    <span class="label">Storage</span>
+    <span class="value">{{bytes $s.Bytes}}</span>
+    <span class="sub">{{count $s.Records "record"}} · {{count $s.Tombstones "tombstone"}}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Members</span>
+    <span class="value">{{$s.Members}}</span>
+    <span class="sub">{{if $s.Pending}}{{count $s.Pending "invite"}} pending{{else}}All invites accepted{{end}}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Last sync</span>
+    <span class="value" title="{{when $s.LastModified}}">{{ago $s.LastModified}}</span>
+    <span class="sub">Created {{when $s.CreatedAt}}</span>
+  </div>
+</section>
+
+<section class="panel">
+  <dl class="facts">
+    <dt>Owner</dt><dd><a href="/users/{{$s.OwnerID}}">{{$s.OwnerEmail}}</a></dd>
+    <dt>Share ID</dt><dd class="mono">{{$s.ShareID}}</dd>
+  </dl>
+</section>
+
+<h2>Members</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+  <tbody>
+  {{range $d.Members}}
+    <tr>
+      <td><a href="/users/{{.UserID}}">{{.Email}}</a></td>
+      <td>{{template "role" .Role}}</td>
+      <td>{{template "member-status" .Status}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+<p class="hint">Membership and roles are managed by the owner in the app, since only they hold the share's key.</p>
+
+<h2>Danger zone</h2>
+<section class="panel danger">
+  <h2>Delete this share</h2>
+  <p>Deletes the share's records and every membership. Members' local copies stay on their devices, but stop syncing. The owner's personal profiles aren't affected.</p>
+  <form method="post" action="/shares/{{$s.ShareID}}/delete" class="inline">
+    <input type="text" name="confirm" placeholder="Type {{$s.Name}} to confirm" required autocomplete="off" aria-label="Confirm share name">
+    <button class="danger">Delete share</button>
+  </form>
+</section>
+{{end}}

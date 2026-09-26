@@ -1,0 +1,44 @@
+{{define "content"}}{{$d := .Data}}
+<h1>Sign-up</h1>
+
+<section class="panel">
+  <h2>Mode: <span class="badge accent">{{$d.Mode}}</span></h2>
+  {{if eq $d.Mode "open"}}
+  <p>Anyone who can reach the server can create an account from the app.</p>
+  {{else if eq $d.Mode "allowlist"}}
+  <p>Only the emails listed below can create an account from the app. You can also create accounts directly on the <a href="/">Users</a> page.</p>
+  {{else}}
+  <p>Sign-up from the app is turned off. Create accounts on the <a href="/">Users</a> page.</p>
+  {{end}}
+  <p class="hint">Change the mode with the <span class="mono">SIGNUP</span> environment variable (<span class="mono">open</span>, <span class="mono">allowlist</span> or <span class="mono">closed</span>) and restart the server.</p>
+</section>
+
+<h2>Allowlist</h2>
+{{if ne $d.Mode "allowlist"}}<p class="hint">The allowlist only takes effect while the mode is <span class="mono">allowlist</span>.</p>{{end}}
+<section class="panel">
+  <form method="post" action="/signup/allow" class="inline">
+    <input type="email" name="email" placeholder="name@example.com" required autocomplete="off" aria-label="Email to allow">
+    <button class="primary">Allow sign-up</button>
+  </form>
+</section>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Email</th><th></th></tr></thead>
+  <tbody>
+  {{range $d.Allowlist}}
+    <tr>
+      <td>{{.}}</td>
+      <td class="num">
+        <form method="post" action="/signup/remove">
+          <input type="hidden" name="email" value="{{.}}">
+          <button class="small danger-outline">Remove</button>
+        </form>
+      </td>
+    </tr>
+  {{else}}
+    <tr><td colspan="2" class="empty">The allowlist is empty.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}

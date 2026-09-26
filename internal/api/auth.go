@@ -75,7 +75,7 @@ func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
 		s.internalError(w, r, err)
 		return
 	}
-	tok, err := s.issueEmailToken(r, email, store.PurposeVerify, verifyTTL)
+	tok, err := s.store.NewEmailCode(r.Context(), email, store.PurposeVerify, verifyTTL)
 	if err != nil {
 		s.internalError(w, r, err)
 		return
@@ -211,7 +211,7 @@ func (s *Server) requestEmailToken(w http.ResponseWriter, r *http.Request, purpo
 			return
 		}
 		if u != nil && !u.Disabled {
-			tok, err := s.issueEmailToken(r, email, purpose, ttl)
+			tok, err := s.store.NewEmailCode(r.Context(), email, purpose, ttl)
 			if err != nil {
 				s.internalError(w, r, err)
 				return
@@ -288,14 +288,6 @@ func (s *Server) issueSession(w http.ResponseWriter, r *http.Request, u *store.U
 		return
 	}
 	writeJSON(w, http.StatusOK, authTokenResp{Token: bearer, Email: u.Email})
-}
-
-// issueEmailToken stores a new single-use token and returns its plaintext.
-// Emailed tokens are pasted by hand, so they are shorter than bearer tokens;
-// 128 bits is plenty for a single-use, short-lived, rate-limited code.
-func (s *Server) issueEmailToken(r *http.Request, email, purpose string, ttl time.Duration) (string, error) {
-	tok := secret.NewToken(16)
-	return tok, s.store.CreateEmailToken(r.Context(), secret.Hash(tok), email, purpose, ttl)
 }
 
 // sendMail delivers in the background: the response must not wait on SMTP,

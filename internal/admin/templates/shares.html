@@ -1,0 +1,31 @@
+{{define "content"}}{{$d := .Data}}
+<h1>Shares</h1>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Owner</th>
+      <th class="num">Members</th>
+      <th class="num">Records</th>
+      <th>Last sync</th>
+      <th>Storage</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range $d.Shares}}
+    <tr>
+      <td><a href="/shares/{{.ShareID}}">{{.Name}}</a></td>
+      <td><a href="/users/{{.OwnerID}}">{{.OwnerEmail}}</a></td>
+      <td class="num">{{.Members}}{{if .Pending}} <span class="badge warn">{{.Pending}} pending</span>{{end}}</td>
+      <td class="num">{{num .Records}}</td>
+      <td title="{{when .LastModified}}">{{ago .LastModified}}</td>
+      <td class="storage"><div class="cell"><progress class="bar" max="100" value="{{pct .Bytes $d.MaxBytes}}"></progress><span class="num">{{bytes .Bytes}}</span></div></td>
+    </tr>
+  {{else}}
+    <tr><td colspan="6" class="empty">Nobody has shared a profile yet.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}

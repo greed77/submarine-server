@@ -1,0 +1,69 @@
+{{define "content"}}{{$d := .Data}}
+<h1>Users</h1>
+
+<section class="stats">
+  <div class="stat">
+    <span class="label">Users</span>
+    <span class="value">{{len $d.Users}}</span>
+    <span class="sub">{{$d.Active}} active{{if $d.Disabled}} · {{$d.Disabled}} disabled{{end}}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Data stored</span>
+    <span class="value">{{bytes $d.TotalBytes}}</span>
+    <span class="sub">{{bytes $d.DBSize}} database file</span>
+  </div>
+  <div class="stat">
+    <span class="label">Records</span>
+    <span class="value">{{num $d.Records}}</span>
+    <span class="sub">{{count $d.Tombstones "tombstone"}}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Shares</span>
+    <span class="value">{{$d.Shares}}</span>
+    <span class="sub">Sign-up is <a href="/signup">{{$d.Signup}}</a></span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Add a user</h2>
+  <form method="post" action="/users" class="inline">
+    <input type="email" name="email" placeholder="name@example.com" required autocomplete="off" aria-label="Email">
+    <button class="primary">Create user</button>
+  </form>
+  <p class="hint">Creates the account and shows a one-time code the person pastes into the app to set their password.</p>
+</section>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Email</th>
+      <th>Status</th>
+      <th>Last seen</th>
+      <th class="num">Devices</th>
+      <th class="num">Profiles</th>
+      <th class="num">Records</th>
+      <th class="num">Shares owned</th>
+      <th>Storage</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range $d.Users}}
+    <tr>
+      <td><a href="/users/{{.ID}}">{{.Email}}</a></td>
+      <td>{{template "status" .}}</td>
+      <td title="{{when .LastSeen}}">{{ago .LastSeen}}</td>
+      <td class="num">{{.Devices}}</td>
+      <td class="num">{{.Profiles}}</td>
+      <td class="num">{{num .Records}}</td>
+      <td class="num">{{.OwnedShares}}</td>
+      <td class="storage"><div class="cell"><progress class="bar" max="100" value="{{pct .TotalBytes $d.MaxBytes}}"></progress><span class="num">{{bytes .TotalBytes}}</span></div></td>
+    </tr>
+  {{else}}
+    <tr><td colspan="8" class="empty">No users yet. Add one above.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+<p class="hint">Storage is the decoded size of each user's encrypted records, including shares they own.</p>
+{{end}}

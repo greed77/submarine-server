@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"code.reedpeople.com/tehgreedo/submarine-server/internal/secret"
 )
 
 // Email token purposes.
@@ -13,6 +15,13 @@ const (
 	PurposeClaim  = "claim"  // issued by /auth/verify, spent by /auth/set-password
 	PurposeReset  = "reset"
 	PurposeLogin  = "login" // magic link
+)
+
+// Codes issued by an admin (CLI or web UI) are handed over out of band, so
+// they live longer than the emailed equivalents.
+const (
+	AdminResetTTL = 24 * time.Hour
+	AdminLoginTTL = time.Hour
 )
 
 func (s *Store) CreateAuthToken(ctx context.Context, userID int64, tokenHash []byte) error {
@@ -34,6 +43,14 @@ func (s *Store) CreateEmailToken(ctx context.Context, tokenHash []byte, email, p
 		`INSERT INTO email_tokens (token_hash, email, purpose, created_at, expires_at) VALUES (?, ?, ?, ?, ?)`,
 		tokenHash, email, purpose, now, now+ttl.Milliseconds())
 	return err
+}
+
+// NewEmailCode issues a single-use code (emailed, or handed over by an admin)
+// and returns its plaintext. Codes are pasted by hand, so they are shorter
+// than bearer tokens; 128 bits is plenty for a single-use, short-lived code.
+func (s *Store) NewEmailCode(ctx context.Context, email, purpose string, ttl time.Duration) (string, error) {
+	code := secret.NewToken(16)
+	return code, s.CreateEmailToken(ctx, secret.Hash(code), email, purpose, ttl)
 }
 
 // consumeEmailToken marks a live token used and returns its email. Missing,

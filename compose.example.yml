@@ -12,11 +12,24 @@ services:
   submarine:
     image: submarine-server:latest   # or build: .
     restart: unless-stopped
+    # "host:container". If a host port is taken, change only the LEFT number
+    # (e.g. "127.0.0.1:9080:8080"). LISTEN_ADDR and ADMIN_ADDR are the ports
+    # *inside* the container and stay :8080 / :8081. Point the tunnel at the
+    # host port.
     ports:
-      - "127.0.0.1:8080:8080"        # loopback only; not reachable from the LAN
+      - "127.0.0.1:8080:8080"        # API: loopback only; not reachable from the LAN
+      - "127.0.0.1:8081:8081"        # admin UI (optional, see below)
     environment:
       SIGNUP: allowlist              # open | allowlist | closed
       TRUST_PROXY_HEADER: CF-Connecting-IP
+      # Admin web UI. Route a SEPARATE tunnel hostname to http://localhost:8081
+      # and protect it with a Cloudflare Access application (unlike the API,
+      # the admin UI is used from a browser, so Access works). The server also
+      # verifies the Access token itself, so the port can't bypass Access.
+      ADMIN_ADDR: ":8081"
+      CF_ACCESS_TEAM_DOMAIN: yourteam   # yourteam.cloudflareaccess.com
+      CF_ACCESS_AUD: paste-the-application-audience-tag-here
+      # ADMIN_PASSWORD: change-me     # basic-auth alternative (or addition) to Access
       # Optional email delivery. Without SMTP_HOST, codes go to `docker logs`.
       # SMTP_HOST: smtp.example.com
       # SMTP_PORT: "587"

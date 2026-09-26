@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.reedpeople.com/tehgreedo/submarine-server/internal/admin"
 	"code.reedpeople.com/tehgreedo/submarine-server/internal/api"
 	"code.reedpeople.com/tehgreedo/submarine-server/internal/config"
 	"code.reedpeople.com/tehgreedo/submarine-server/internal/mail"
@@ -103,14 +104,14 @@ func serve() error {
 	defer stop()
 	go srv.RunJanitor(ctx)
 
-	httpSrv := &http.Server{
+	servers := []*http.Server{{
 		Addr:              cfg.ListenAddr,
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       5 * time.Minute,
 		WriteTimeout:      5 * time.Minute,
 		IdleTimeout:       2 * time.Minute,
-	}
+	}}
 	log.Info("starting submarine-server", "version", version, "addr", cfg.ListenAddr, "db", cfg.DBPath,
 		"base_path", cfg.BasePath, "signup", cfg.Signup, "smtp", cfg.SMTPEnabled(),
 		"trust_proxy_header", cfg.TrustProxyHeader)
@@ -118,8 +119,26 @@ func serve() error {
 		log.Warn("SMTP_HOST not set: auth emails (with their codes) are written to this log instead")
 	}
 
-	errc := make(chan error, 1)
-	go func() { errc <- httpSrv.ListenAndServe() }()
+	if cfg.AdminAddr != "" {
+		servers = append(servers, &http.Server{
+			Addr:              cfg.AdminAddr,
+			Handler:           admin.New(cfg, st, log, version).Handler(),
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       time.Minute,
+			WriteTimeout:      time.Minute,
+			IdleTimeout:       2 * time.Minute,
+		})
+		log.Info("admin UI enabled", "addr", cfg.AdminAddr, "cloudflare_access", cfg.AccessEnabled(),
+			"password", cfg.AdminPassword != "")
+		if !cfg.AccessEnabled() && cfg.AdminPassword == "" {
+			log.Warn("admin UI has NO authentication (ADMIN_INSECURE_NO_AUTH=true); keep its port private")
+		}
+	}
+
+	errc := make(chan error, len(servers))
+	for _, s := range servers {
+		go func() { errc <- s.ListenAndServe() }()
+	}
 	select {
 	case err := <-errc:
 		return err
@@ -128,7 +147,11 @@ func serve() error {
 	log.Info("shutting down")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return httpSrv.Shutdown(shutdownCtx)
+	var errs []error
+	for _, s := range servers {
+		errs = append(errs, s.Shutdown(shutdownCtx))
+	}
+	return errors.Join(errs...)
 }
 
 // healthcheck lets a FROM-scratch container (no curl) run a HEALTHCHECK.

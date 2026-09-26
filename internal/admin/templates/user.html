@@ -1,0 +1,108 @@
+{{define "content"}}{{$d := .Data}}{{$u := $d.User}}
+<p class="crumbs"><a href="/">Users</a> /</p>
+<h1>{{$u.Email}} {{template "status" $u}}</h1>
+
+<section class="stats">
+  <div class="stat">
+    <span class="label">Storage</span>
+    <span class="value">{{bytes $u.TotalBytes}}</span>
+    <span class="sub">{{bytes $u.PersonalBytes}} personal · {{bytes $u.SharedBytes}} in owned shares</span>
+  </div>
+  <div class="stat">
+    <span class="label">Records</span>
+    <span class="value">{{num $u.Records}}</span>
+    <span class="sub">{{count $u.Tombstones "tombstone"}} · {{count $u.Profiles "profile"}}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Last seen</span>
+    <span class="value" title="{{when $u.LastSeen}}">{{ago $u.LastSeen}}</span>
+    <span class="sub">Joined {{when $u.CreatedAt}}</span>
+  </div>
+  <div class="stat">
+    <span class="label">Sharing identity</span>
+    <span class="value">{{if $u.HasKey}}Published{{else}}None{{end}}</span>
+    <span class="sub">{{if $u.HasKey}}Others can share profiles with them{{else}}Can't receive shares yet{{end}}</span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Account</h2>
+  <div class="buttons">
+    <form method="post" action="/users/{{$u.ID}}/reset-code"><button>Password reset code</button></form>
+    <form method="post" action="/users/{{$u.ID}}/login-code"><button>Sign-in code</button></form>
+    <form method="post" action="/users/{{$u.ID}}/signout"><button{{if not $u.Devices}} disabled{{end}}>Sign out all devices</button></form>
+    {{if $u.Disabled}}
+    <form method="post" action="/users/{{$u.ID}}/enable"><button>Enable account</button></form>
+    {{else}}
+    <form method="post" action="/users/{{$u.ID}}/disable"><button class="danger-outline">Disable account</button></form>
+    {{end}}
+  </div>
+  <p class="hint">Codes are single use and shown once. Disabling blocks sign-in and signs out every device, but keeps the data.</p>
+</section>
+
+<h2>Profiles</h2>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Name</th><th class="num">Items</th><th class="num">Tombstones</th><th class="num">Records</th><th class="num">Size</th><th>Last sync</th></tr>
+  </thead>
+  <tbody>
+  {{range $d.Profiles}}
+    <tr>
+      <td>{{.Name}}{{if ne .Name .Profile}}<span class="sub mono">{{.Profile}}</span>{{end}}</td>
+      <td class="num">{{num .Live}}</td>
+      <td class="num">{{num .Tombstones}}</td>
+      <td class="num">{{num .Records}}</td>
+      <td class="num">{{bytes .Bytes}}</td>
+      <td title="{{when .LastUpdated}}">{{ago .LastUpdated}}</td>
+    </tr>
+  {{else}}
+    <tr><td colspan="6" class="empty">No synced profiles.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+
+<h2>Shares</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Share</th><th>Role</th><th>Status</th><th>Owner</th></tr></thead>
+  <tbody>
+  {{range $d.Shares}}
+    <tr>
+      <td><a href="/shares/{{.ShareID}}">{{.Name}}</a></td>
+      <td>{{template "role" .Role}}</td>
+      <td>{{template "member-status" .Status}}</td>
+      <td>{{.OwnerEmail}}</td>
+    </tr>
+  {{else}}
+    <tr><td colspan="4" class="empty">Not a member of any shares.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+
+<h2>Signed-in devices</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Signed in</th><th>Last active</th></tr></thead>
+  <tbody>
+  {{range $d.Sessions}}
+    <tr><td>{{when .CreatedAt}}</td><td title="{{when .LastUsed}}">{{ago .LastUsed}}</td></tr>
+  {{else}}
+    <tr><td colspan="2" class="empty">No devices signed in.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+
+<h2>Danger zone</h2>
+<section class="panel danger">
+  <h2>Delete this user</h2>
+  <p>Permanently deletes the account, every synced profile, and every share they own (other members lose access to those). This can't be undone.</p>
+  <form method="post" action="/users/{{$u.ID}}/delete" class="inline">
+    <input type="text" name="confirm" placeholder="Type {{$u.Email}} to confirm" required autocomplete="off" aria-label="Confirm email">
+    <button class="danger">Delete user and data</button>
+  </form>
+</section>
+{{end}}
